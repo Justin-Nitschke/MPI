@@ -99,7 +99,7 @@ struct Node {
         float width = 2 * half_width;
 
         if (!is_internal || (width / dist) < theta) {
-            float G = 0.0001;
+            float G = 0.1;
             float force = (G * b->mass * total_mass) / (dist * dist);
             
             float fx = force * (dx / dist);
