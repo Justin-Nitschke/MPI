@@ -14,6 +14,9 @@
 
 #include "Node.hpp"
 
+std::vector<Node> node_pool;
+int node_idx = 0;
+
 float map_coord(float value, float min, float total_width) {
     return -1.0 + 2.0 * (value - min) / total_width;
 }
@@ -81,6 +84,7 @@ int main(int argc, char *argv[]) {
     float theta = 0.5;
     float dt = 0.005;
     bool visualize = false;
+    bool pool = false;
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
@@ -142,6 +146,8 @@ int main(int argc, char *argv[]) {
             }
         } else if (arg == "-v" || arg == "-V") {
             visualize = true;
+        } else if (arg == "-p" || arg == "-P") {
+            pool = true;
         }
     }
 
@@ -168,6 +174,8 @@ int main(int argc, char *argv[]) {
                >> bodies[i].x_velocity
                >> bodies[i].y_velocity;
     }
+
+    node_pool.resize(num_bodies * 50);
 
     std::vector<int> recvcounts(num_processes);
     std::vector<int> displs(num_processes);
@@ -230,10 +238,14 @@ int main(int argc, char *argv[]) {
     double start_time = MPI_Wtime();
 
     for (int t = 0; t < timesteps; t++) {
+        if (pool) node_idx = 0;
+
         //Set the domain to (0,0) to (4,4)
         float min_bound = 0;
         float max_bound = 4;
-        Node *root = new Node(0, 0, 2);
+        Node *root = nullptr;
+        if (pool) root = get_new_node(0, 0, 2, true);
+        else root = new Node(0, 0, 2);
 
         for(int i = 0; i < num_bodies; i++) {
             if (bodies[i].mass != -1) {
@@ -362,7 +374,7 @@ int main(int argc, char *argv[]) {
         }
 
         //cleanup
-        delete root;
+        if (!pool) delete root;
     }
 
     MPI_Barrier(MPI_COMM_WORLD);

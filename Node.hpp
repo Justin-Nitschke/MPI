@@ -8,8 +8,9 @@ struct Node {
     float square_x, square_y;
     float half_width;
     bool is_internal;
-
-    Node(float x, float y, float hw) : square_x(x), square_y(y), half_width(hw) {
+    bool pool;
+    
+    Node() : square_x(0), square_y(0), half_width(0), pool(false) {
         body = nullptr;
         is_internal = false;
         total_mass = 0;
@@ -17,12 +18,27 @@ struct Node {
         com_y = 0;
         for (int i = 0; i < 4; i++) children[i] = nullptr;
     }
+    
+    Node(float x, float y, float hw, bool _pool = false) : square_x(x), square_y(y), half_width(hw) {
+        body = nullptr;
+        is_internal = false;
+        total_mass = 0;
+        com_x = 0;
+        com_y = 0;
+        pool = _pool;
+        for (int i = 0; i < 4; i++) children[i] = nullptr;
+    }
 
     ~Node() {
-        for (int i = 0; i < 4; i++) {
-            if (children[i]) delete children[i];
+        if (pool) return;
+        else {
+            for (int i = 0; i < 4; i++) {
+                if (children[i]) delete children[i];
+            }
         }
     }
+
+    void split();
 
     void insert(Body *b) {
         if (is_internal) {
@@ -116,17 +132,6 @@ struct Node {
         }
     }
 
-    void split() {
-        float quarter = half_width / 2;
-        float center_x = square_x + half_width;
-        float center_y = square_y + half_width;
-
-        children[0] = new Node(square_x, center_y, quarter);
-        children[1] = new Node(center_x, center_y, quarter);
-        children[2] = new Node(square_x, square_y, quarter);
-        children[3] = new Node(center_x, square_y, quarter);
-    }
-
     int get_quadrant(Body *b) {
         double center_x = square_x + half_width;
         double center_y = square_y + half_width;
@@ -140,3 +145,33 @@ struct Node {
         else return 3;
     }
 };
+
+extern int node_idx;
+extern std::vector<Node> node_pool;
+
+ //Get a new node if using node pool
+Node * get_new_node(float x, float y, float hw, bool _pool = true) {
+     if (node_idx >= (int)node_pool.size()) {
+        node_pool.resize(node_pool.size() * 2); 
+    }
+
+    return new (&node_pool[node_idx++]) Node(x, y, hw, _pool);
+}
+
+inline void Node::split() {
+        float quarter = half_width / 2;
+        float center_x = square_x + half_width;
+        float center_y = square_y + half_width;
+
+        if (pool) {
+            children[0] = get_new_node(square_x, center_y, quarter);
+            children[1] = get_new_node(center_x, center_y, quarter);
+            children[2] = get_new_node(square_x, square_y, quarter);
+            children[3] = get_new_node(center_x, square_y, quarter);
+        } else {
+            children[0] = new Node(square_x, center_y, quarter);
+            children[1] = new Node(center_x, center_y, quarter);
+            children[2] = new Node(square_x, square_y, quarter);
+            children[3] = new Node(center_x, square_y, quarter);
+        }
+    }
