@@ -4,7 +4,7 @@ CXXFLAGS = -Wall -Wextra -O3
 
 LDFLAGS = -lGL -lGLU -lglut -lGLEW -lglfw3 -lX11 -lXrandr -lpthread -ldl
 
-TARGET = main
+TARGET = nbody
 
 SRC = main.cpp
 
